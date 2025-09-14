@@ -4,7 +4,7 @@
 
 ## 🌟 デモ
 
-[GitHub Pages でライブデモを見る](https://あなたのユーザー名.github.io/huffman/)
+[GitHub Pages でライブデモを見る](https://keisuke-yamauch1.github.io/huffman/)
 
 ## 🚀 機能
 
@@ -81,7 +81,7 @@
 2. GitHub リポジトリの Settings → Pages を開く
 3. Source を「Deploy from a branch」に設定
 4. Branch を「main」、フォルダを「/ (root)」に設定
-5. Save を押すと `https://あなたのユーザー名.github.io/リポジトリ名/` でアクセス可能
+5. Save を押すと `https://keisuke-yamauch1.github.io/リポジトリ名/` でアクセス可能
 
 ## 🤝 貢献
 
