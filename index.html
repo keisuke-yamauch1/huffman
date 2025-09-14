@@ -873,6 +873,12 @@
             renderMultipleTrees(trees) {
                 if (!trees || trees.length === 0) return;
                 
+                // 初期ステップ（ステップ0）の場合、頻度降順で並び替え
+                let sortedTrees = [...trees];
+                if (this.currentStep === 0) {
+                    sortedTrees.sort((a, b) => b.frequency - a.frequency);
+                }
+                
                 const containerRect = document.querySelector('.tree-container').getBoundingClientRect();
                 const width = containerRect.width - 40;
                 const height = containerRect.height - 40;
@@ -880,14 +886,14 @@
                 this.svg.attr('width', width).attr('height', height);
                 
                 // 各木のサイズと位置を計算
-                const treeWidth = Math.min(250, width / Math.max(1, trees.length));
-                const startX = (width - (treeWidth * trees.length)) / 2;
+                const treeWidth = Math.min(250, width / Math.max(1, sortedTrees.length));
+                const startX = (width - (treeWidth * sortedTrees.length)) / 2;
                 
                 let allNodes = [];
                 let allLinks = [];
                 let allEdgeLabels = [];
                 
-                trees.forEach((tree, treeIndex) => {
+                sortedTrees.forEach((tree, treeIndex) => {
                     if (!tree) return;
                     
                     const treeLayout = d3.tree()
