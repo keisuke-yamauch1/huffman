@@ -131,7 +131,7 @@
         
         .tree-container {
             flex: 2;
-            min-height: 500px;
+            min-height: 700px;
             border: 2px solid #ddd;
             border-radius: 8px;
             background-color: #fafafa;
@@ -741,13 +741,15 @@
                 
                 this.svg.attr('width', width).attr('height', height);
                 
-                const treeLayout = d3.tree().size([width - 100, height - 100]);
+                const treeLayout = d3.tree()
+                    .size([width - 200, height - 200])
+                    .separation((a, b) => a.parent === b.parent ? 2 : 3);
                 const hierarchy = d3.hierarchy(root, d => [d.left, d.right].filter(Boolean));
                 const treeData = treeLayout(hierarchy);
                 
                 treeData.descendants().forEach(d => {
-                    d.x += 50;
-                    d.y += 50;
+                    d.x += 100;
+                    d.y += 100;
                 });
                 
                 // リンクを描画
@@ -756,12 +758,15 @@
                     .data(treeData.links(), d => d.target.data.id);
                 
                 links.enter()
-                    .append('path')
+                    .append('line')
                     .attr('class', 'tree-link')
                     .merge(links)
                     .transition()
                     .duration(500)
-                    .attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
                 
                 links.exit().remove();
                 
@@ -879,14 +884,16 @@
                 trees.forEach((tree, treeIndex) => {
                     if (!tree) return;
                     
-                    const treeLayout = d3.tree().size([treeWidth * 0.8, height - 150]);
+                    const treeLayout = d3.tree()
+                        .size([treeWidth * 0.7, height - 250])
+                        .separation((a, b) => a.parent === b.parent ? 1.5 : 2.5);
                     const hierarchy = d3.hierarchy(tree, d => [d.left, d.right].filter(Boolean));
                     const treeData = treeLayout(hierarchy);
                     
                     // 各ノードの位置を調整
                     treeData.descendants().forEach(d => {
-                        d.x += startX + (treeIndex * treeWidth) + (treeWidth * 0.1);
-                        d.y += 80;
+                        d.x += startX + (treeIndex * treeWidth) + (treeWidth * 0.15);
+                        d.y += 120;
                         d.treeIndex = treeIndex; // どの木に属するかを記録
                     });
                     
@@ -913,12 +920,15 @@
                     .data(allLinks, d => d.target.data.id);
                 
                 links.enter()
-                    .append('path')
+                    .append('line')
                     .attr('class', 'tree-link')
                     .merge(links)
                     .transition()
                     .duration(500)
-                    .attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`)
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y)
                     .attr('class', d => {
                         let classes = 'tree-link';
                         if (d.target.data.isNew) classes += ' new';
