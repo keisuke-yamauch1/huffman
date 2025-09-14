@@ -130,8 +130,8 @@
         }
         
         .tree-container {
-            flex: 2;
-            min-height: 700px;
+            flex: 3;
+            min-height: 600px;
             border: 2px solid #ddd;
             border-radius: 8px;
             background-color: #fafafa;
@@ -142,6 +142,7 @@
         .queue-container {
             flex: 1;
             padding: 15px;
+            max-width: 300px;
             background-color: #f8f9fa;
             border-radius: 8px;
             border: 2px solid #ddd;
@@ -742,14 +743,14 @@
                 this.svg.attr('width', width).attr('height', height);
                 
                 const treeLayout = d3.tree()
-                    .size([width - 200, height - 200])
-                    .separation((a, b) => a.parent === b.parent ? 2 : 3);
+                    .size([width - 10, 400])
+                    .separation((a, b) => a.parent === b.parent ? 500 : 800);
                 const hierarchy = d3.hierarchy(root, d => [d.left, d.right].filter(Boolean));
                 const treeData = treeLayout(hierarchy);
                 
                 treeData.descendants().forEach(d => {
-                    d.x += 100;
-                    d.y += 100;
+                    d.x += 5;
+                    d.y += 75;
                 });
                 
                 // リンクを描画
@@ -803,7 +804,7 @@
                     .on('mouseleave', () => this.hideTooltip());
                 
                 nodeEnter.append('circle')
-                    .attr('r', 20);
+                    .attr('r', 18);
                 
                 nodeEnter.append('text');
                 
@@ -853,11 +854,16 @@
                     tooltipText = `内部ノード<br>頻度: ${node.frequency}<br>ステップ: ${node.step}`;
                 }
                 
+                // ノードの位置を取得してツールチップをその直下に配置
+                const containerRect = document.querySelector('.tree-container').getBoundingClientRect();
+                const nodeX = d.x + containerRect.left;
+                const nodeY = d.y + containerRect.top;
+                
                 this.tooltip
                     .style('opacity', 1)
                     .html(tooltipText)
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 10) + 'px');
+                    .style('left', (nodeX - 40) + 'px')  // ツールチップを中央寄せ
+                    .style('top', (nodeY - 5) + 'px');    // ノードのすぐ下
             }
             
             hideTooltip() {
@@ -885,15 +891,15 @@
                     if (!tree) return;
                     
                     const treeLayout = d3.tree()
-                        .size([treeWidth * 0.7, height - 250])
-                        .separation((a, b) => a.parent === b.parent ? 1.5 : 2.5);
+                        .size([treeWidth * 0.99, 300])
+                        .separation((a, b) => a.parent === b.parent ? 100 : 160);
                     const hierarchy = d3.hierarchy(tree, d => [d.left, d.right].filter(Boolean));
                     const treeData = treeLayout(hierarchy);
                     
                     // 各ノードの位置を調整
                     treeData.descendants().forEach(d => {
-                        d.x += startX + (treeIndex * treeWidth) + (treeWidth * 0.15);
-                        d.y += 120;
+                        d.x += startX + (treeIndex * treeWidth) + (treeWidth * 0.005);
+                        d.y += 90;
                         d.treeIndex = treeIndex; // どの木に属するかを記録
                     });
                     
