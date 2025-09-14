@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハフマン木構築ビジュアライザー</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"] {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .step-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step-info {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .frequency-table {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .frequency-table h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .freq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        
+        .freq-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .char {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .freq {
+            color: #28a745;
+        }
+        
+        .visualization-area {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .tree-container {
+            flex: 2;
+            min-height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+            position: relative;
+        }
+        
+        .queue-container {
+            flex: 1;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        
+        .queue-container h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            transition: all 0.3s ease;
+        }
+        
+        .queue-item.highlight {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            transform: scale(1.02);
+        }
+        
+        .queue-item.removing {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .node-info {
+            font-weight: bold;
+        }
+        
+        .node-freq {
+            color: #28a745;
+            font-size: 12px;
+        }
+        
+        .step-description {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .step-description h4 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+        
+        .codes-table {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .codes-table h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .codes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .code-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .code {
+            font-family: 'Courier New', monospace;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        #tree-svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .tree-node {
+            cursor: pointer;
+        }
+        
+        .tree-node circle {
+            fill: #007bff;
+            stroke: #0056b3;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .tree-node.leaf circle {
+            fill: #28a745;
+            stroke: #1e7e34;
+        }
+        
+        .tree-node.new circle {
+            fill: #ffc107;
+            stroke: #e0a800;
+        }
+        
+        .tree-node:hover circle {
+            r: 25;
+            filter: brightness(1.1);
+        }
+        
+        .tree-node text {
+            fill: white;
+            text-anchor: middle;
+            dominant-baseline: central;
+            font-weight: bold;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        
+        .tree-link {
+            fill: none;
+            stroke: #666;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .tree-link.new {
+            stroke: #ffc107;
+            stroke-width: 3px;
+        }
+        
+        .edge-label {
+            font-size: 14px;
+            font-weight: bold;
+            fill: #dc3545;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ハフマン木構築ビジュアライザー</h1>
+        
+        <div class="controls">
+            <div class="input-group">
+                <label for="text-input">入力テキスト:</label>
+                <input type="text" id="text-input" value="ABRACADABRA" placeholder="テキストを入力してください">
+            </div>
+            
+            <button id="build-tree">木を構築</button>
+            <button id="reset">リセット</button>
+            
+            <div class="step-controls">
+                <button id="prev-step" disabled>← 前のステップ</button>
+                <span class="step-info" id="step-info">ステップ: 0 / 0</span>
+                <button id="next-step" disabled>次のステップ →</button>
+            </div>
+            
+            <button id="auto-play" disabled>自動再生</button>
+            <button id="pause" disabled style="display: none;">一時停止</button>
+        </div>
+        
+        <div class="frequency-table" id="frequency-table">
+            <h3>文字の出現頻度</h3>
+            <div class="freq-grid" id="freq-grid"></div>
+        </div>
+        
+        <div class="visualization-area">
+            <div class="tree-container">
+                <svg id="tree-svg"></svg>
+                <div class="tooltip" id="tooltip"></div>
+            </div>
+            
+            <div class="queue-container">
+                <h3>優先度キュー</h3>
+                <div id="priority-queue"></div>
+            </div>
+        </div>
+        
+        <div class="step-description" id="step-description" style="display: none;">
+            <h4>ステップの説明</h4>
+            <p id="description-text">木の構築を開始するには、上の「木を構築」ボタンをクリックしてください。</p>
+        </div>
+        
+        <div class="codes-table" id="codes-table">
+            <h3>生成されたハフマン符号</h3>
+            <div class="codes-grid" id="codes-grid"></div>
+        </div>
+    </div>
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        class HuffmanNode {
+            constructor(character, frequency, left = null, right = null) {
+                this.character = character;
+                this.frequency = frequency;
+                this.left = left;
+                this.right = right;
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.x = 0;
+                this.y = 0;
+                this.isNew = false;
+                this.step = -1;
+            }
+            
+            isLeaf() {
+                return this.left === null && this.right === null;
+            }
+        }
+
+        class PriorityQueue {
+            constructor() {
+                this.items = [];
+            }
+            
+            enqueue(item) {
+                let added = false;
+                for (let i = 0; i < this.items.length; i++) {
+                    if (item.frequency < this.items[i].frequency || 
+                        (item.frequency === this.items[i].frequency && 
+                         item.character && this.items[i].character && 
+                         item.character < this.items[i].character)) {
+                        this.items.splice(i, 0, item);
+                        added = true;
+                        break;
+                    }
+                }
+                if (!added) {
+                    this.items.push(item);
+                }
+            }
+            
+            dequeue() {
+                return this.items.shift();
+            }
+            
+            isEmpty() {
+                return this.items.length === 0;
+            }
+            
+            size() {
+                return this.items.length;
+            }
+            
+            peek() {
+                return this.items[0];
+            }
+        }
+
+        class HuffmanVisualizer {
+            constructor() {
+                this.svg = d3.select('#tree-svg');
+                this.tooltip = d3.select('#tooltip');
+                this.currentStep = 0;
+                this.steps = [];
+                this.root = null;
+                this.frequencies = {};
+                this.codes = {};
+                this.isPlaying = false;
+                this.playInterval = null;
+                
+                this.margin = { top: 50, right: 50, bottom: 50, left: 50 };
+                this.width = 800;
+                this.height = 500;
+                
+                this.setupEventListeners();
+                this.setupSVG();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('build-tree').addEventListener('click', () => this.buildTree());
+                document.getElementById('reset').addEventListener('click', () => this.reset());
+                document.getElementById('prev-step').addEventListener('click', () => this.previousStep());
+                document.getElementById('next-step').addEventListener('click', () => this.nextStep());
+                document.getElementById('auto-play').addEventListener('click', () => this.startAutoPlay());
+                document.getElementById('pause').addEventListener('click', () => this.stopAutoPlay());
+            }
+            
+            setupSVG() {
+                this.svg.attr('width', '100%').attr('height', '100%');
+                this.svg.append('g').attr('class', 'links');
+                this.svg.append('g').attr('class', 'nodes');
+                this.svg.append('g').attr('class', 'labels');
+            }
+            
+            calculateFrequencies(text) {
+                const frequencies = {};
+                for (let char of text) {
+                    frequencies[char] = (frequencies[char] || 0) + 1;
+                }
+                return frequencies;
+            }
+            
+            displayFrequencyTable(frequencies) {
+                const table = document.getElementById('frequency-table');
+                const grid = document.getElementById('freq-grid');
+                
+                grid.innerHTML = '';
+                
+                Object.entries(frequencies)
+                    .sort(([,a], [,b]) => a - b)
+                    .forEach(([char, freq]) => {
+                        const item = document.createElement('div');
+                        item.className = 'freq-item';
+                        item.innerHTML = `
+                            <span class="char">${char}</span>
+                            <span class="freq">${freq}</span>
+                        `;
+                        grid.appendChild(item);
+                    });
+                
+                table.style.display = 'block';
+            }
+            
+            buildTree() {
+                const text = document.getElementById('text-input').value.trim();
+                if (!text) {
+                    alert('テキストを入力してください');
+                    return;
+                }
+                
+                this.frequencies = this.calculateFrequencies(text);
+                this.displayFrequencyTable(this.frequencies);
+                
+                this.steps = this.generateSteps();
+                this.currentStep = 0;
+                this.updateStepInfo();
+                this.showStep(0);
+                
+                document.getElementById('prev-step').disabled = true;
+                document.getElementById('next-step').disabled = this.steps.length <= 1;
+                document.getElementById('auto-play').disabled = this.steps.length <= 1;
+                
+                document.getElementById('step-description').style.display = 'block';
+            }
+            
+            generateSteps() {
+                const steps = [];
+                const queue = new PriorityQueue();
+                
+                // 初期ステップ: 各文字をキューに追加
+                Object.entries(this.frequencies).forEach(([char, freq]) => {
+                    const node = new HuffmanNode(char, freq);
+                    node.step = 0;
+                    queue.enqueue(node);
+                });
+                
+                steps.push({
+                    queue: [...queue.items],
+                    description: `初期状態: 各文字を頻度順に優先度キューに格納しました。`,
+                    action: 'init',
+                    newNode: null
+                });
+                
+                let stepNumber = 1;
+                
+                while (queue.size() > 1) {
+                    const left = queue.dequeue();
+                    const right = queue.dequeue();
+                    
+                    steps.push({
+                        queue: [...queue.items],
+                        description: `ステップ ${stepNumber}: 最小頻度の2つのノード (${left.character || 'Internal'}: ${left.frequency}, ${right.character || 'Internal'}: ${right.frequency}) を取り出しました。`,
+                        action: 'remove',
+                        removedNodes: [left, right],
+                        newNode: null
+                    });
+                    
+                    const merged = new HuffmanNode(null, left.frequency + right.frequency, left, right);
+                    merged.step = stepNumber;
+                    merged.isNew = true;
+                    
+                    queue.enqueue(merged);
+                    
+                    steps.push({
+                        queue: [...queue.items],
+                        description: `新しい内部ノード (頻度: ${merged.frequency}) を作成し、キューに追加しました。`,
+                        action: 'merge',
+                        newNode: merged,
+                        mergedFrom: [left, right]
+                    });
+                    
+                    stepNumber++;
+                }
+                
+                if (queue.size() === 1) {
+                    this.root = queue.dequeue();
+                    this.generateCodes(this.root, '');
+                    
+                    steps.push({
+                        queue: [],
+                        description: `完了: ハフマン木の構築が完了しました！`,
+                        action: 'complete',
+                        root: this.root
+                    });
+                }
+                
+                return steps;
+            }
+            
+            generateCodes(node, code) {
+                if (!node) return;
+                
+                if (node.isLeaf()) {
+                    this.codes[node.character] = code || '0';
+                } else {
+                    this.generateCodes(node.left, code + '0');
+                    this.generateCodes(node.right, code + '1');
+                }
+            }
+            
+            showStep(stepIndex) {
+                if (stepIndex < 0 || stepIndex >= this.steps.length) return;
+                
+                this.currentStep = stepIndex;
+                const step = this.steps[stepIndex];
+                
+                this.updatePriorityQueue(step.queue, step.action, step.removedNodes);
+                this.updateDescription(step.description);
+                this.updateStepInfo();
+                
+                if (step.action === 'complete') {
+                    this.renderTree(this.root);
+                    this.displayCodesTable();
+                } else if (step.newNode) {
+                    this.renderTree(step.newNode);
+                }
+                
+                document.getElementById('prev-step').disabled = stepIndex === 0;
+                document.getElementById('next-step').disabled = stepIndex === this.steps.length - 1;
+            }
+            
+            updatePriorityQueue(queue, action, removedNodes = []) {
+                const container = document.getElementById('priority-queue');
+                container.innerHTML = '';
+                
+                queue.forEach((node, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'queue-item';
+                    
+                    if (node.isNew && action === 'merge') {
+                        item.classList.add('highlight');
+                        setTimeout(() => {
+                            item.classList.remove('highlight');
+                        }, 1000);
+                    }
+                    
+                    const char = node.character || `[${node.frequency}]`;
+                    item.innerHTML = `
+                        <span class="node-info">${char}</span>
+                        <span class="node-freq">頻度: ${node.frequency}</span>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+                
+                if (queue.length === 0) {
+                    const emptyMsg = document.createElement('div');
+                    emptyMsg.textContent = 'キューが空になりました';
+                    emptyMsg.style.textAlign = 'center';
+                    emptyMsg.style.color = '#666';
+                    container.appendChild(emptyMsg);
+                }
+            }
+            
+            renderTree(root) {
+                if (!root) return;
+                
+                const containerRect = document.querySelector('.tree-container').getBoundingClientRect();
+                const width = containerRect.width - 40;
+                const height = containerRect.height - 40;
+                
+                this.svg.attr('width', width).attr('height', height);
+                
+                const treeLayout = d3.tree().size([width - 100, height - 100]);
+                const hierarchy = d3.hierarchy(root, d => [d.left, d.right].filter(Boolean));
+                const treeData = treeLayout(hierarchy);
+                
+                treeData.descendants().forEach(d => {
+                    d.x += 50;
+                    d.y += 50;
+                });
+                
+                // リンクを描画
+                const links = this.svg.select('.links')
+                    .selectAll('.tree-link')
+                    .data(treeData.links(), d => d.target.data.id);
+                
+                links.enter()
+                    .append('path')
+                    .attr('class', 'tree-link')
+                    .merge(links)
+                    .transition()
+                    .duration(500)
+                    .attr('d', d3.linkVertical()
+                        .x(d => d.x)
+                        .y(d => d.y));
+                
+                links.exit().remove();
+                
+                // エッジラベルを描画（0, 1）
+                const edgeLabels = this.svg.select('.labels')
+                    .selectAll('.edge-label')
+                    .data(treeData.links(), d => d.target.data.id);
+                
+                edgeLabels.enter()
+                    .append('text')
+                    .attr('class', 'edge-label')
+                    .merge(edgeLabels)
+                    .transition()
+                    .duration(500)
+                    .attr('x', d => (d.source.x + d.target.x) / 2)
+                    .attr('y', d => (d.source.y + d.target.y) / 2)
+                    .text(d => {
+                        const parent = d.source.data;
+                        const child = d.target.data;
+                        return parent.left === child ? '0' : '1';
+                    });
+                
+                edgeLabels.exit().remove();
+                
+                // ノードを描画
+                const nodes = this.svg.select('.nodes')
+                    .selectAll('.tree-node')
+                    .data(treeData.descendants(), d => d.data.id);
+                
+                const nodeEnter = nodes.enter()
+                    .append('g')
+                    .attr('class', 'tree-node')
+                    .on('mouseenter', (event, d) => this.showTooltip(event, d))
+                    .on('mouseleave', () => this.hideTooltip());
+                
+                nodeEnter.append('circle')
+                    .attr('r', 20);
+                
+                nodeEnter.append('text');
+                
+                const nodeUpdate = nodeEnter.merge(nodes);
+                
+                nodeUpdate
+                    .transition()
+                    .duration(500)
+                    .attr('transform', d => `translate(${d.x},${d.y})`);
+                
+                nodeUpdate.select('circle')
+                    .attr('class', d => {
+                        let classes = '';
+                        if (d.data.isLeaf()) classes += 'leaf';
+                        if (d.data.isNew) classes += ' new';
+                        return classes;
+                    });
+                
+                nodeUpdate.select('text')
+                    .text(d => {
+                        if (d.data.isLeaf()) {
+                            return d.data.character;
+                        } else {
+                            return d.data.frequency;
+                        }
+                    });
+                
+                nodes.exit().remove();
+                
+                // 新規ノードのハイライトを一定時間後に解除
+                setTimeout(() => {
+                    if (root.isNew) {
+                        root.isNew = false;
+                        this.renderTree(root);
+                    }
+                }, 1000);
+            }
+            
+            showTooltip(event, d) {
+                const node = d.data;
+                let tooltipText = '';
+                
+                if (node.isLeaf()) {
+                    const code = this.codes[node.character] || '未生成';
+                    tooltipText = `文字: ${node.character}<br>頻度: ${node.frequency}<br>符号: ${code}`;
+                } else {
+                    tooltipText = `内部ノード<br>頻度: ${node.frequency}<br>ステップ: ${node.step}`;
+                }
+                
+                this.tooltip
+                    .style('opacity', 1)
+                    .html(tooltipText)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px');
+            }
+            
+            hideTooltip() {
+                this.tooltip.style('opacity', 0);
+            }
+            
+            displayCodesTable() {
+                const table = document.getElementById('codes-table');
+                const grid = document.getElementById('codes-grid');
+                
+                grid.innerHTML = '';
+                
+                Object.entries(this.codes)
+                    .sort(([,a], [,b]) => a.length - b.length || a.localeCompare(b))
+                    .forEach(([char, code]) => {
+                        const item = document.createElement('div');
+                        item.className = 'code-item';
+                        item.innerHTML = `
+                            <span class="char">${char}</span>
+                            <span class="code">${code}</span>
+                        `;
+                        grid.appendChild(item);
+                    });
+                
+                table.style.display = 'block';
+            }
+            
+            updateDescription(text) {
+                document.getElementById('description-text').textContent = text;
+            }
+            
+            updateStepInfo() {
+                document.getElementById('step-info').textContent = 
+                    `ステップ: ${this.currentStep + 1} / ${this.steps.length}`;
+            }
+            
+            previousStep() {
+                if (this.currentStep > 0) {
+                    this.showStep(this.currentStep - 1);
+                }
+            }
+            
+            nextStep() {
+                if (this.currentStep < this.steps.length - 1) {
+                    this.showStep(this.currentStep + 1);
+                }
+            }
+            
+            startAutoPlay() {
+                if (this.isPlaying) return;
+                
+                this.isPlaying = true;
+                document.getElementById('auto-play').style.display = 'none';
+                document.getElementById('pause').style.display = 'inline-block';
+                
+                this.playInterval = setInterval(() => {
+                    if (this.currentStep < this.steps.length - 1) {
+                        this.nextStep();
+                    } else {
+                        this.stopAutoPlay();
+                    }
+                }, 2000);
+            }
+            
+            stopAutoPlay() {
+                if (!this.isPlaying) return;
+                
+                this.isPlaying = false;
+                document.getElementById('auto-play').style.display = 'inline-block';
+                document.getElementById('pause').style.display = 'none';
+                
+                if (this.playInterval) {
+                    clearInterval(this.playInterval);
+                    this.playInterval = null;
+                }
+            }
+            
+            reset() {
+                this.stopAutoPlay();
+                this.currentStep = 0;
+                this.steps = [];
+                this.root = null;
+                this.frequencies = {};
+                this.codes = {};
+                
+                this.svg.selectAll('*').remove();
+                this.setupSVG();
+                
+                document.getElementById('frequency-table').style.display = 'none';
+                document.getElementById('codes-table').style.display = 'none';
+                document.getElementById('step-description').style.display = 'none';
+                document.getElementById('priority-queue').innerHTML = '';
+                
+                document.getElementById('prev-step').disabled = true;
+                document.getElementById('next-step').disabled = true;
+                document.getElementById('auto-play').disabled = true;
+                
+                this.updateStepInfo();
+            }
+        }
+
+        // アプリケーション開始
+        const visualizer = new HuffmanVisualizer();
+    </script>
+</body>
+</html>
