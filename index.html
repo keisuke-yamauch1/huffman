@@ -761,9 +761,7 @@
                     .merge(links)
                     .transition()
                     .duration(500)
-                    .attr('d', d3.linkVertical()
-                        .x(d => d.x)
-                        .y(d => d.y));
+                    .attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`);
                 
                 links.exit().remove();
                 
@@ -920,9 +918,7 @@
                     .merge(links)
                     .transition()
                     .duration(500)
-                    .attr('d', d3.linkVertical()
-                        .x(d => d.x)
-                        .y(d => d.y))
+                    .attr('d', d => `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`)
                     .attr('class', d => {
                         let classes = 'tree-link';
                         if (d.target.data.isNew) classes += ' new';
