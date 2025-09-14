@@ -302,6 +302,85 @@
             transition: opacity 0.3s;
             z-index: 1000;
         }
+        
+        .compression-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        
+        .compression-result h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .result-section {
+            margin-bottom: 15px;
+        }
+        
+        .result-section h4 {
+            margin: 0 0 8px 0;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .original-text {
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            word-wrap: break-word;
+        }
+        
+        .compressed-text {
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #007bff;
+            word-wrap: break-word;
+            line-height: 1.4;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .compression-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .stat-item {
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .stat-value.compression-ratio {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -352,6 +431,22 @@
         <div class="codes-table" id="codes-table">
             <h3>生成されたハフマン符号</h3>
             <div class="codes-grid" id="codes-grid"></div>
+        </div>
+        
+        <div class="compression-result" id="compression-result" style="display: none;">
+            <h3>圧縮結果</h3>
+            <div class="result-section">
+                <h4>元のテキスト:</h4>
+                <div class="original-text" id="original-text"></div>
+            </div>
+            <div class="result-section">
+                <h4>圧縮後のバイナリ文字列:</h4>
+                <div class="compressed-text" id="compressed-text"></div>
+            </div>
+            <div class="result-section">
+                <h4>圧縮効率:</h4>
+                <div class="compression-stats" id="compression-stats"></div>
+            </div>
         </div>
     </div>
     
@@ -465,7 +560,7 @@
                 grid.innerHTML = '';
                 
                 Object.entries(frequencies)
-                    .sort(([,a], [,b]) => a - b)
+                    .sort(([,a], [,b]) => b - a)
                     .forEach(([char, freq]) => {
                         const item = document.createElement('div');
                         item.className = 'freq-item';
@@ -486,6 +581,7 @@
                     return;
                 }
                 
+                this.originalText = text;
                 this.frequencies = this.calculateFrequencies(text);
                 this.displayFrequencyTable(this.frequencies);
                 
@@ -589,6 +685,7 @@
                 if (step.action === 'complete') {
                     this.renderTree(this.root);
                     this.displayCodesTable();
+                    this.displayCompressionResult();
                 } else if (step.newNode) {
                     this.renderTree(step.newNode);
                 }
@@ -780,6 +877,66 @@
                 table.style.display = 'block';
             }
             
+            compressText() {
+                if (!this.originalText || !this.codes) return '';
+                
+                let compressed = '';
+                for (let char of this.originalText) {
+                    compressed += this.codes[char] || '';
+                }
+                return compressed;
+            }
+            
+            calculateCompressionStats() {
+                const originalBits = this.originalText.length * 8; // ASCII: 8 bits per character
+                const compressedBits = this.compressText().length;
+                const compressionRatio = ((originalBits - compressedBits) / originalBits * 100);
+                const spaceSaved = originalBits - compressedBits;
+                
+                return {
+                    originalBits,
+                    compressedBits,
+                    compressionRatio: compressionRatio.toFixed(2),
+                    spaceSaved,
+                    efficiency: (compressedBits / originalBits * 100).toFixed(2)
+                };
+            }
+            
+            displayCompressionResult() {
+                const compressedText = this.compressText();
+                const stats = this.calculateCompressionStats();
+                
+                // 元のテキストを表示
+                document.getElementById('original-text').textContent = this.originalText;
+                
+                // 圧縮後のバイナリ文字列を表示（適度に区切って見やすくする）
+                const formattedCompressed = compressedText.match(/.{1,8}/g)?.join(' ') || compressedText;
+                document.getElementById('compressed-text').textContent = formattedCompressed;
+                
+                // 統計情報を表示
+                const statsContainer = document.getElementById('compression-stats');
+                statsContainer.innerHTML = `
+                    <div class="stat-item">
+                        <span class="stat-label">元のサイズ:</span>
+                        <span class="stat-value">${stats.originalBits} bits</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">圧縮後サイズ:</span>
+                        <span class="stat-value">${stats.compressedBits} bits</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">圧縮率:</span>
+                        <span class="stat-value compression-ratio">${stats.compressionRatio}%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">節約されたビット数:</span>
+                        <span class="stat-value">${stats.spaceSaved} bits</span>
+                    </div>
+                `;
+                
+                document.getElementById('compression-result').style.display = 'block';
+            }
+            
             updateDescription(text) {
                 document.getElementById('description-text').textContent = text;
             }
@@ -843,6 +1000,7 @@
                 
                 document.getElementById('frequency-table').style.display = 'none';
                 document.getElementById('codes-table').style.display = 'none';
+                document.getElementById('compression-result').style.display = 'none';
                 document.getElementById('step-description').style.display = 'none';
                 document.getElementById('priority-queue').innerHTML = '';
                 
