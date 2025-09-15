@@ -817,7 +817,7 @@
                     const tree = trees[0];
                     if (tree) {
                         const { nodes, links, edgeLabels } = this.layoutTree(tree, {
-                            size: [width * 1.8, 320],
+                            size: [width * 1.0, 320],
                             offset: { x: 2, y: 75 },
                             nodeRadius: 18,
                             fontSize: '12px',
@@ -935,6 +935,7 @@
                     .on('mouseleave', () => this.hideTooltip());
                 
                 nodeEnter.append('circle');
+                nodeEnter.append('text').attr('class', 'node-freq');
                 nodeEnter.append('text').attr('class', 'node-char');
                 
                 const nodeUpdate = nodeEnter.merge(nodes);
@@ -955,10 +956,21 @@
                     });
                 
                 // 頻度を表示（円の中央）
-                nodeUpdate.select('.node-char')
+                nodeUpdate.select('.node-freq')
                     .attr('y', isMultipleView ? 3 : 4)
                     .style('font-size', isMultipleView ? '10px' : '12px')
                     .text(d => d.data.frequency);
+
+                // 文字を表示（リーフノードの場合のみ、円の下）
+                nodeUpdate.select('.node-char')
+                    .attr('y', d => {
+                        const radius = d.nodeRadius || (isMultipleView ? 15 : 18);
+                        return radius + (isMultipleView ? 10 : 15);
+                    })
+                    .style('font-size', isMultipleView ? '11px' : '14px')
+                    .style('font-weight', 'bold')
+                    .style('fill', '#333')
+                    .text(d => d.data.isLeaf() ? d.data.character : '');
                 
                 nodes.exit().remove();
             }
