@@ -383,6 +383,32 @@
         .stat-value.compression-ratio {
             color: #dc3545;
         }
+
+        .code-segment {
+            padding: 1px 2px;
+            border-radius: 2px;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        .code-segment-0 {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+
+        .code-segment-1 {
+            background-color: #e8f5e8;
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+
+        .code-segment:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -1013,14 +1039,61 @@
             
             compressText() {
                 if (!this.originalText || !this.codes) return '';
-                
+
                 let compressed = '';
                 for (let char of this.originalText) {
                     compressed += this.codes[char] || '';
                 }
                 return compressed;
             }
-            
+
+            compressTextWithSegments() {
+                if (!this.originalText || !this.codes) return { compressed: '', segments: [] };
+
+                let compressed = '';
+                let segments = [];
+
+                for (let char of this.originalText) {
+                    const code = this.codes[char] || '';
+                    if (code) {
+                        segments.push({
+                            code: code,
+                            character: char,
+                            start: compressed.length,
+                            end: compressed.length + code.length
+                        });
+                        compressed += code;
+                    }
+                }
+
+                return { compressed, segments };
+            }
+
+            displayColorCodedCompression(compressed, segments) {
+                const compressedTextElement = document.getElementById('compressed-text');
+                compressedTextElement.innerHTML = '';
+
+                // ドキュメントフラグメントを使用してパフォーマンスを最適化
+                const fragment = document.createDocumentFragment();
+
+                segments.forEach((segment, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = segment.code;
+                    span.className = `code-segment code-segment-${index % 2}`;
+                    span.title = `文字: ${segment.character}, 符号: ${segment.code}`;
+
+                    fragment.appendChild(span);
+
+                    // 符号間にスペースを追加（最後以外）
+                    if (index < segments.length - 1) {
+                        const space = document.createTextNode(' ');
+                        fragment.appendChild(space);
+                    }
+                });
+
+                compressedTextElement.appendChild(fragment);
+            }
+
             calculateCompressionStats() {
                 const originalBits = this.originalText.length * 8; // ASCII: 8 bits per character
                 const compressedBits = this.compressText().length;
@@ -1037,15 +1110,14 @@
             }
             
             displayCompressionResult() {
-                const compressedText = this.compressText();
+                const { compressed, segments } = this.compressTextWithSegments();
                 const stats = this.calculateCompressionStats();
-                
+
                 // 元のテキストを表示
                 document.getElementById('original-text').textContent = this.originalText;
-                
-                // 圧縮後のバイナリ文字列を表示（適度に区切って見やすくする）
-                const formattedCompressed = compressedText.match(/.{1,8}/g)?.join(' ') || compressedText;
-                document.getElementById('compressed-text').textContent = formattedCompressed;
+
+                // 圧縮後のバイナリ文字列を符号ごとに色分けして表示
+                this.displayColorCodedCompression(compressed, segments);
                 
                 // 統計情報を表示
                 const statsContainer = document.getElementById('compression-stats');
