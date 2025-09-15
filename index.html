@@ -409,6 +409,21 @@
             z-index: 10;
             position: relative;
         }
+
+        .plain-compressed-text {
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #333;
+            word-wrap: break-word;
+            line-height: 1.4;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -469,6 +484,10 @@
             </div>
             <div class="result-section">
                 <h4>圧縮後のバイナリ文字列:</h4>
+                <div class="plain-compressed-text" id="plain-compressed-text"></div>
+            </div>
+            <div class="result-section">
+                <h4>圧縮後のバイナリ文字列（文字ごとに色分け）:</h4>
                 <div class="compressed-text" id="compressed-text"></div>
             </div>
             <div class="result-section">
@@ -1086,6 +1105,11 @@
                 return { compressed, segments };
             }
 
+            displayPlainCompression(compressed) {
+                const plainCompressedTextElement = document.getElementById('plain-compressed-text');
+                plainCompressedTextElement.textContent = compressed;
+            }
+
             displayColorCodedCompression(compressed, segments) {
                 const compressedTextElement = document.getElementById('compressed-text');
                 compressedTextElement.innerHTML = '';
@@ -1133,9 +1157,12 @@
                 // 元のテキストを表示
                 document.getElementById('original-text').textContent = this.originalText;
 
+                // 圧縮後のバイナリ文字列を黒一色で表示
+                this.displayPlainCompression(compressed);
+
                 // 圧縮後のバイナリ文字列を符号ごとに色分けして表示
                 this.displayColorCodedCompression(compressed, segments);
-                
+
                 // 統計情報を表示
                 const statsContainer = document.getElementById('compression-stats');
                 statsContainer.innerHTML = `
@@ -1156,7 +1183,7 @@
                         <span class="stat-value">${stats.spaceSaved} bits</span>
                     </div>
                 `;
-                
+
                 document.getElementById('compression-result').style.display = 'block';
             }
             
