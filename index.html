@@ -131,7 +131,7 @@
         
         .tree-container {
             flex: 4;
-            min-height: 600px;
+            min-height: 700px;
             border: 2px solid #ddd;
             border-radius: 8px;
             background-color: #fafafa;
@@ -733,114 +733,11 @@
                 }
             }
             
-            renderTree(root) {
+            renderTree(root, options = {}) {
                 if (!root) return;
                 
-                const containerRect = document.querySelector('.tree-container').getBoundingClientRect();
-                const width = containerRect.width - 40;
-                const height = containerRect.height - 40;
-                
-                this.svg.attr('width', width).attr('height', height);
-                
-                const treeLayout = d3.tree()
-                    .size([width * 1.6, 250])
-                    .separation((a, b) => a.parent === b.parent ? 25 : 40);
-                const hierarchy = d3.hierarchy(root, d => [d.left, d.right].filter(Boolean));
-                const treeData = treeLayout(hierarchy);
-                
-                treeData.descendants().forEach(d => {
-                    d.x += 2;
-                    d.y += 75;
-                });
-                
-                // リンクを描画
-                const links = this.svg.select('.links')
-                    .selectAll('.tree-link')
-                    .data(treeData.links(), d => d.target.data.id);
-                
-                links.enter()
-                    .append('line')
-                    .attr('class', 'tree-link')
-                    .merge(links)
-                    .transition()
-                    .duration(500)
-                    .attr('x1', d => d.source.x)
-                    .attr('y1', d => d.source.y)
-                    .attr('x2', d => d.target.x)
-                    .attr('y2', d => d.target.y);
-                
-                links.exit().remove();
-                
-                // エッジラベルを描画（0, 1）
-                const edgeLabels = this.svg.select('.labels')
-                    .selectAll('.edge-label')
-                    .data(treeData.links(), d => d.target.data.id);
-                
-                edgeLabels.enter()
-                    .append('text')
-                    .attr('class', 'edge-label')
-                    .merge(edgeLabels)
-                    .transition()
-                    .duration(500)
-                    .attr('x', d => (d.source.x + d.target.x) / 2)
-                    .attr('y', d => (d.source.y + d.target.y) / 2)
-                    .text(d => {
-                        const parent = d.source.data;
-                        const child = d.target.data;
-                        return parent.left === child ? '0' : '1';
-                    });
-                
-                edgeLabels.exit().remove();
-                
-                // ノードを描画
-                const nodes = this.svg.select('.nodes')
-                    .selectAll('.tree-node')
-                    .data(treeData.descendants(), d => d.data.id);
-                
-                const nodeEnter = nodes.enter()
-                    .append('g')
-                    .attr('class', 'tree-node')
-                    .on('mouseenter', (event, d) => this.showTooltip(event, d))
-                    .on('mouseleave', () => this.hideTooltip());
-                
-                nodeEnter.append('circle')
-                    .attr('r', 18);
-                
-                nodeEnter.append('text');
-                
-                const nodeUpdate = nodeEnter.merge(nodes);
-                
-                nodeUpdate
-                    .transition()
-                    .duration(500)
-                    .attr('transform', d => `translate(${d.x},${d.y})`);
-                
-                nodeUpdate.select('circle')
-                    .attr('class', d => {
-                        let classes = '';
-                        if (d.data.isLeaf()) classes += 'leaf';
-                        if (d.data.isNew) classes += ' new';
-                        return classes;
-                    });
-                
-                nodeUpdate.select('text')
-                    .text(d => {
-                        if (d.data.isLeaf()) {
-                            return d.data.character;
-                        } else {
-                            return d.data.frequency;
-                        }
-                    });
-                
-                nodes.exit().remove();
-                
-                // 新規ノードのハイライトを一定時間後に解除
-                setTimeout(() => {
-                    if (root.isNew) {
-                        root.isNew = false;
-                        this.renderTree(root);
-                    }
-                }, 1000);
+                const trees = [root];
+                this.renderTrees(trees, { isMultipleView: false, ...options });
             }
             
             showTooltip(event, d) {
@@ -879,54 +776,112 @@
                     sortedTrees.sort((a, b) => b.frequency - a.frequency);
                 }
                 
+                this.renderTrees(sortedTrees, { isMultipleView: true });
+            }
+            
+            renderTrees(trees, options = {}) {
+                const { isMultipleView = false } = options;
+                
                 const containerRect = document.querySelector('.tree-container').getBoundingClientRect();
                 const width = containerRect.width - 40;
                 const height = containerRect.height - 40;
                 
                 this.svg.attr('width', width).attr('height', height);
                 
-                // 各木のサイズと位置を計算
-                const treeWidth = Math.min(250, width / Math.max(1, sortedTrees.length));
-                const startX = (width - (treeWidth * sortedTrees.length)) / 2;
-                
                 let allNodes = [];
                 let allLinks = [];
                 let allEdgeLabels = [];
                 
-                sortedTrees.forEach((tree, treeIndex) => {
-                    if (!tree) return;
+                if (isMultipleView && trees.length > 1) {
+                    // 複数木レイアウト
+                    const treeWidth = Math.min(250, width / Math.max(1, trees.length));
+                    const startX = (width - (treeWidth * trees.length)) / 2;
                     
-                    const treeLayout = d3.tree()
-                        .size([treeWidth * 1.2, 200])
-                        .separation((a, b) => a.parent === b.parent ? 18 : 28);
-                    const hierarchy = d3.hierarchy(tree, d => [d.left, d.right].filter(Boolean));
-                    const treeData = treeLayout(hierarchy);
-                    
-                    // 各ノードの位置を調整
-                    treeData.descendants().forEach(d => {
-                        d.x += startX + (treeIndex * treeWidth) + (treeWidth * 0.005);
-                        d.y += 90;
-                        d.treeIndex = treeIndex; // どの木に属するかを記録
-                    });
-                    
-                    allNodes = allNodes.concat(treeData.descendants());
-                    allLinks = allLinks.concat(treeData.links());
-                    
-                    // エッジラベル用のデータを追加
-                    treeData.links().forEach(link => {
-                        const parent = link.source.data;
-                        const child = link.target.data;
-                        const label = parent.left === child ? '0' : '1';
-                        allEdgeLabels.push({
-                            x: (link.source.x + link.target.x) / 2,
-                            y: (link.source.y + link.target.y) / 2,
-                            text: label,
-                            id: `${link.source.data.id}-${link.target.data.id}`
+                    trees.forEach((tree, treeIndex) => {
+                        if (!tree) return;
+                        
+                        const { nodes, links, edgeLabels } = this.layoutTree(tree, {
+                            size: [treeWidth * 1.4, 240],
+                            offset: { x: startX + (treeIndex * treeWidth) + (treeWidth * 0.005), y: 90 },
+                            nodeRadius: 15,
+                            fontSize: '10px',
+                            isMultipleView: true
                         });
+                        
+                        allNodes = allNodes.concat(nodes);
+                        allLinks = allLinks.concat(links);
+                        allEdgeLabels = allEdgeLabels.concat(edgeLabels);
                     });
+                } else {
+                    // 単一木レイアウト
+                    const tree = trees[0];
+                    if (tree) {
+                        const { nodes, links, edgeLabels } = this.layoutTree(tree, {
+                            size: [width * 1.8, 320],
+                            offset: { x: 2, y: 75 },
+                            nodeRadius: 18,
+                            fontSize: '12px',
+                            isMultipleView: false
+                        });
+                        
+                        allNodes = nodes;
+                        allLinks = links;
+                        allEdgeLabels = edgeLabels;
+                    }
+                }
+                
+                this.renderElements(allNodes, allLinks, allEdgeLabels, { isMultipleView });
+                this.handleNewNodeHighlight(trees);
+            }
+            
+            layoutTree(tree, config) {
+                const { size, offset, nodeRadius, fontSize, isMultipleView = false } = config;
+                
+                const treeLayout = d3.tree()
+                    .size(size)
+                    .separation((a, b) => a.parent === b.parent ? (isMultipleView ? 25 : 35) : (isMultipleView ? 40 : 60));
+                    
+                const hierarchy = d3.hierarchy(tree, d => [d.left, d.right].filter(Boolean));
+                const treeData = treeLayout(hierarchy);
+                
+                // ノード位置を調整
+                treeData.descendants().forEach(d => {
+                    d.x += offset.x;
+                    d.y += offset.y;
+                    d.nodeRadius = nodeRadius;
+                    d.fontSize = fontSize;
                 });
                 
+                const nodes = treeData.descendants();
+                const links = treeData.links();
+                const edgeLabels = links.map(link => {
+                    const parent = link.source.data;
+                    const child = link.target.data;
+                    return {
+                        x: (link.source.x + link.target.x) / 2,
+                        y: (link.source.y + link.target.y) / 2,
+                        text: parent.left === child ? '0' : '1',
+                        id: `${link.source.data.id}-${link.target.data.id}`
+                    };
+                });
+                
+                return { nodes, links, edgeLabels };
+            }
+            
+            renderElements(allNodes, allLinks, allEdgeLabels, options = {}) {
+                const { isMultipleView = false } = options;
+                
                 // リンクを描画
+                this.renderLinks(allLinks);
+                
+                // エッジラベルを描画
+                this.renderEdgeLabels(allEdgeLabels);
+                
+                // ノードを描画
+                this.renderNodes(allNodes, isMultipleView);
+            }
+            
+            renderLinks(allLinks) {
                 const links = this.svg.select('.links')
                     .selectAll('.tree-link')
                     .data(allLinks, d => d.target.data.id);
@@ -948,8 +903,9 @@
                     });
                 
                 links.exit().remove();
-                
-                // エッジラベルを描画
+            }
+            
+            renderEdgeLabels(allEdgeLabels) {
                 const edgeLabels = this.svg.select('.labels')
                     .selectAll('.edge-label')
                     .data(allEdgeLabels, d => d.id);
@@ -965,8 +921,9 @@
                     .text(d => d.text);
                 
                 edgeLabels.exit().remove();
-                
-                // ノードを描画
+            }
+            
+            renderNodes(allNodes, isMultipleView) {
                 const nodes = this.svg.select('.nodes')
                     .selectAll('.tree-node')
                     .data(allNodes, d => d.data.id);
@@ -977,10 +934,8 @@
                     .on('mouseenter', (event, d) => this.showTooltip(event, d))
                     .on('mouseleave', () => this.hideTooltip());
                 
-                nodeEnter.append('circle')
-                    .attr('r', 15); // 複数木表示時は少し小さく
-                
-                nodeEnter.append('text');
+                nodeEnter.append('circle');
+                nodeEnter.append('text').attr('class', 'node-char');
                 
                 const nodeUpdate = nodeEnter.merge(nodes);
                 
@@ -989,7 +944,9 @@
                     .duration(500)
                     .attr('transform', d => `translate(${d.x},${d.y})`);
                 
+                // 円を更新
                 nodeUpdate.select('circle')
+                    .attr('r', d => d.nodeRadius || (isMultipleView ? 15 : 18))
                     .attr('class', d => {
                         let classes = '';
                         if (d.data.isLeaf()) classes += 'leaf';
@@ -997,24 +954,25 @@
                         return classes;
                     });
                 
-                nodeUpdate.select('text')
-                    .text(d => {
-                        if (d.data.isLeaf()) {
-                            return d.data.character;
-                        } else {
-                            return d.data.frequency;
-                        }
-                    })
-                    .style('font-size', '10px'); // 複数木表示時は少し小さく
+                // 頻度を表示（円の中央）
+                nodeUpdate.select('.node-char')
+                    .attr('y', isMultipleView ? 3 : 4)
+                    .style('font-size', isMultipleView ? '10px' : '12px')
+                    .text(d => d.data.frequency);
                 
                 nodes.exit().remove();
-                
-                // 新規ノードのハイライトを一定時間後に解除
+            }
+            
+            handleNewNodeHighlight(trees) {
                 setTimeout(() => {
                     trees.forEach(tree => {
                         if (tree && tree.isNew) {
                             tree.isNew = false;
-                            this.renderMultipleTrees(trees);
+                            if (trees.length === 1) {
+                                this.renderTree(tree);
+                            } else {
+                                this.renderMultipleTrees(trees);
+                            }
                         }
                     });
                 }, 1000);
