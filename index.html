@@ -496,6 +496,16 @@
             isLeaf() {
                 return this.left === null && this.right === null;
             }
+
+            getCharacters() {
+                if (this.isLeaf()) {
+                    return [this.character];
+                }
+
+                const leftChars = this.left ? this.left.getCharacters() : [];
+                const rightChars = this.right ? this.right.getCharacters() : [];
+                return [...leftChars, ...rightChars].sort();
+            }
         }
 
         class PriorityQueue {
@@ -741,9 +751,16 @@
                         }, 1000);
                     }
                     
-                    const char = node.character || `[${node.frequency}]`;
+                    let displayText;
+                    if (node.character) {
+                        displayText = node.character;
+                    } else {
+                        const characters = node.getCharacters();
+                        displayText = `[${characters.join(',')}]`;
+                    }
+
                     item.innerHTML = `
-                        <span class="node-info">${char}</span>
+                        <span class="node-info">${displayText}</span>
                         <span class="node-freq">頻度: ${node.frequency}</span>
                     `;
                     
